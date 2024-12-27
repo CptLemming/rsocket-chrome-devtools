@@ -7,28 +7,74 @@ import AutoSizer from 'react-virtualized-auto-sizer';
 import classNames from 'classnames';
 import './App.scss';
 import {ObjectInspector} from 'react-inspector';
-import {Frame} from 'rsocket-types';
-import {
-  BufferEncoders,
-  deserializeFrame,
-  deserializeFrameWithLength,
-  FLAGS,
-  FRAME_TYPES,
-  printFrame,
-  Utf8Encoders
-} from "rsocket-core";
-import {Encoders} from "rsocket-core/RSocketEncoding";
+import {deserializeFrame, deserializeFrameWithLength, Frame, FrameTypes} from "@rsocket/core";
 import Protocol from "devtools-protocol";
 import {action, makeObservable, observable, computed} from "mobx";
 import {observer} from "mobx-react-lite";
+import {Buffer} from "buffer";
 import {Index, IndexSearchResult} from "flexsearch";
 import WebSocketFrameReceivedEvent = Protocol.Network.WebSocketFrameReceivedEvent;
 import WebSocketFrameSentEvent = Protocol.Network.WebSocketFrameSentEvent;
 import WebSocketFrame = Protocol.Network.WebSocketFrame;
 import WebSocketCreatedEvent = Protocol.Network.WebSocketCreatedEvent;
 
+const flagsMap = new Map<string, number>([
+  // ["NONE", 0],
+  ["COMPLETE", 64],
+  ["FOLLOWS", 128],
+  ["IGNORE", 512],
+  ["LEASE", 64],
+  ["METADATA", 256],
+  ["NEXT", 32],
+  ["RESPOND", 128],
+  ["RESUME_ENABLE", 128]
+]);
+const frameTypesMap = new Map<string, number>([
+  ["RESERVED", 0],
+  ["SETUP", 1],
+  ["LEASE", 2],
+  ["KEEPALIVE", 3],
+  ["REQUEST_RESPONSE", 4],
+  ["REQUEST_FNF", 5],
+  ["REQUEST_STREAM", 6],
+  ["REQUEST_CHANNEL", 7],
+  ["REQUEST_N", 8],
+  ["CANCEL", 9],
+  ["PAYLOAD", 10],
+  ["ERROR", 11],
+  ["METADATA_PUSH", 12],
+  ["RESUME", 13],
+  ["RESUME_OK", 14],
+  ["EXT", 63]
+]);
+
+function printFrame(frame: Frame) {
+  const obj: Object = {...frame};
+  Object.entries(obj).forEach(([key, value]) => {
+      if (value) {
+          //@ts-ignore
+          obj[key] = value.toString()
+      }
+  })
+  //@ts-ignore
+  obj.type = FrameTypes[frame.type] + ` (${toHex(frame.type)})`;
+  const flagNames = [];
+  for (let [name, flag] of flagsMap) {
+      if ((frame.flags & flag) === flag) {
+          flagNames.push(name);
+      }
+  }
+  //@ts-ignore
+  obj.flags = flagNames.join(' | ') + ` (${toHex(frame.flags)})`;
+  if (frame.type === FrameTypes.ERROR) {
+      //@ts-ignore
+      obj.code = getErrorCodeExplanation(frame.code) + ` (${toHex(frame.code)})`;
+  }
+  return JSON.stringify(obj, null, 2);
+}
+
 function getRSocketType(type: number): string {
-  for (const [name, code] of Object.entries(FRAME_TYPES)) {
+  for (const [name, code] of frameTypesMap) {
     if (code === type) {
       return name;
     }
@@ -43,7 +89,7 @@ function toHex(n: number): string {
 function shortFrame(frame: Frame) {
   const name = getRSocketType(frame.type);
   const flags: string[] = [];
-  for (const [name, flag] of Object.entries(FLAGS)) {
+  for (const [name, flag] of flagsMap) {
     // noinspection JSBitwiseOperatorUsage
     if (frame.flags & flag) {
       flags.push(name);
@@ -190,14 +236,13 @@ const TextViewer = ({data}: { data: string | Uint8Array }) => (
 );
 
 // Could
-let cachedEncoders: Encoders<any> = Utf8Encoders
 let cachedLengthPrefixedFrames: boolean = false;
 
-function tryDeserializeFrameWith(data: string, buffer: Buffer, lengthPrefixedFrames: boolean, encoders: Encoders<any>) {
+function tryDeserializeFrameWith(data: string, buffer: Buffer, lengthPrefixedFrames: boolean) {
   try {
     return lengthPrefixedFrames
-      ? deserializeFrameWithLength(buffer, encoders)
-      : deserializeFrame(buffer, encoders);
+      ? deserializeFrameWithLength(buffer)
+      : deserializeFrame(buffer);
   } catch (e) {
     // console.error("failed to decode frame", e)
     return undefined;
@@ -206,28 +251,8 @@ function tryDeserializeFrameWith(data: string, buffer: Buffer, lengthPrefixedFra
 
 function tryDeserializeFrame(data: string): Frame | undefined {
   const buffer = base64ToArrayBuffer(data)
-  let frame: Frame | undefined;
-  // fast path
-  frame = tryDeserializeFrameWith(data, buffer, cachedLengthPrefixedFrames, cachedEncoders);
-  if (frame) {
-    return frame;
-  }
-  // slow path
-  let attempts: [Encoders<any>, boolean][] = [
-    [Utf8Encoders, false],
-    [Utf8Encoders, true],
-    [BufferEncoders, false],
-    [BufferEncoders, true],
-  ];
-  for (let [encoders, lengthPrefixedFrames] of attempts) {
-    frame = tryDeserializeFrameWith(data, buffer, lengthPrefixedFrames, encoders);
-    if (frame) {
-      cachedEncoders = encoders;
-      cachedLengthPrefixedFrames = lengthPrefixedFrames;
-      return frame;
-    }
-  }
-  return undefined;
+  let frame: Frame | undefined = tryDeserializeFrameWith(data, buffer, cachedLengthPrefixedFrames);
+  return frame;
 }
 
 const RSocketViewer = ({frame, data}: { frame: Frame, data: string }) => {

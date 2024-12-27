@@ -134,6 +134,18 @@
     mkdirp "^1.0.4"
     rimraf "^3.0.2"
 
+"@rsocket/core@^1.0.0-alpha.3":
+  version "1.0.0-alpha.3"
+  resolved "https://registry.yarnpkg.com/@rsocket/core/-/core-1.0.0-alpha.3.tgz#7fa474ab1a76009a550073a0d02a5bb46d6a1ef1"
+  integrity sha512-aBI6gtQZJ6l9IbNyp0flTLDM7FoyFyNIGFALADhgNc9pOcALDvunOclbM+s59A2TazqDb6skAzUUqhgXa4vR5Q==
+
+"@rsocket/websocket-client@^1.0.0-alpha.3":
+  version "1.0.0-alpha.3"
+  resolved "https://registry.yarnpkg.com/@rsocket/websocket-client/-/websocket-client-1.0.0-alpha.3.tgz#bfe30e9afa2981f79467d8d14a8f5c98f4c6b15a"
+  integrity sha512-WIPCJzBN9kvBe3RXjGrH/zwqIgZuIJPNqVDfMiOnFZeavIFE8/Kh1l9Mw0cM23LO2GXsj0cHOW52Tta3UlcwJg==
+  dependencies:
+    "@rsocket/core" "^1.0.0-alpha.3"
+
 "@sindresorhus/merge-streams@^1.0.0":
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/@sindresorhus/merge-streams/-/merge-streams-1.0.0.tgz#9cd84cc15bc865a5ca35fcaae198eb899f7b5c90"
@@ -289,56 +301,6 @@
     "@types/prop-types" "*"
     "@types/scheduler" "*"
     csstype "^3.0.2"
-
-"@types/rsocket-core@*":
-  version "0.0.10"
-  resolved "https://registry.yarnpkg.com/@types/rsocket-core/-/rsocket-core-0.0.10.tgz#3ac78bcb541f88c4067914e6c1ca2ab3bbdc2460"
-  integrity sha512-Ngha3jIhMPeB9SDDCJvY3nu137Q3yVVM7uTy1jrDNehjqMEA5oMXayET3LTEistKoa/THohbfKeKFes+gvH6Lg==
-  dependencies:
-    "@types/node" "*"
-    "@types/rsocket-flowable" "*"
-    "@types/rsocket-types" "*"
-
-"@types/rsocket-core@^0.0.6":
-  version "0.0.6"
-  resolved "https://registry.yarnpkg.com/@types/rsocket-core/-/rsocket-core-0.0.6.tgz#a1e9febf2a21fc14fb943858740d92f430d560e1"
-  integrity sha512-jL5ZTuUMa8qDZp+1wdmE3IP5teavMQHP++5mPCCbXwEywqBLzKUrZOy0ausaYzd50wRqcBYCsO9o5UFif4fcyQ==
-  dependencies:
-    "@types/node" "*"
-    "@types/rsocket-flowable" "*"
-    "@types/rsocket-types" "*"
-
-"@types/rsocket-flowable@*":
-  version "0.0.8"
-  resolved "https://registry.yarnpkg.com/@types/rsocket-flowable/-/rsocket-flowable-0.0.8.tgz#599a94695b171ef2ccfe3ebcd09418e00028669f"
-  integrity sha512-It+fbW3fiUJLsL1IkvWL8K18gt4oMpXGgjbSA3hhRLdnkPlBCCqpPzT4WlD8rQtojSoer6bcSVjqQQQQCds+fQ==
-  dependencies:
-    "@types/rsocket-types" "*"
-
-"@types/rsocket-types@*":
-  version "0.0.6"
-  resolved "https://registry.yarnpkg.com/@types/rsocket-types/-/rsocket-types-0.0.6.tgz#ac0c338ac585b2e928f2e9cb418ab7cd0bb8a6ca"
-  integrity sha512-l9ZKGUc9OWcF0BJvhl3d6nFEVudOeB4BVrXupu+oOYQWYPNGARSTMrw9ZzBQsRR+PKZvGevpQLTPY17n80Cgsg==
-  dependencies:
-    "@types/node" "*"
-    "@types/rsocket-flowable" "*"
-
-"@types/rsocket-types@^0.0.2":
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/@types/rsocket-types/-/rsocket-types-0.0.2.tgz#a39946a902e345e872df6176336496a4b1f97587"
-  integrity sha512-OkyRD4t4djiznJOGo3txcBEZy+dpC5s+mfDxkD4pd++V923Xp5vTqTBFIb5YQlXpwLw5pMQJc8xTOu4JIq+cmA==
-  dependencies:
-    "@types/node" "*"
-    "@types/rsocket-flowable" "*"
-
-"@types/rsocket-websocket-client@^0.0.3":
-  version "0.0.3"
-  resolved "https://registry.yarnpkg.com/@types/rsocket-websocket-client/-/rsocket-websocket-client-0.0.3.tgz#44ae9fd86d04d836bd432027eed6e16ad5a58e8a"
-  integrity sha512-AeAgUClLeFvCymC9ocgIAgaD+h5ZPLvJzJaw7DSHAkBh9wVCcrtRGOhGpHf0prN6rf8tG09dcWs5yzbCYYnmFA==
-  dependencies:
-    "@types/rsocket-core" "*"
-    "@types/rsocket-flowable" "*"
-    "@types/rsocket-types" "*"
 
 "@types/scheduler@*":
   version "0.16.8"
@@ -2538,35 +2500,6 @@ rimraf@^3.0.2:
   integrity sha512-JZkJMZkAGFFPP2YqXZXPbMlMBgsxzE8ILs4lMIX/2o0L9UBw9O/Y3o6wFw/i9YLapcUJWwqbi3kdxIPdC62TIA==
   dependencies:
     glob "^7.1.3"
-
-rsocket-core@^0.0.27:
-  version "0.0.27"
-  resolved "https://registry.yarnpkg.com/rsocket-core/-/rsocket-core-0.0.27.tgz#a9eb36fc8282cfe37b39f0c4a1fc86ab665afeed"
-  integrity sha512-q/+8PY0BIPvwXb6jPsnKCdyUKFusrm4JDzWnxbW1Ywu2sG/suv28/+mHC7kRGtMnRsxsLAWnqsmI6EznTabItA==
-  dependencies:
-    rsocket-flowable "^0.0.27"
-    rsocket-types "^0.0.27"
-
-rsocket-flowable@^0.0.27:
-  version "0.0.27"
-  resolved "https://registry.yarnpkg.com/rsocket-flowable/-/rsocket-flowable-0.0.27.tgz#389254cc1532908ae8b3ac033dc2374f57e2d661"
-  integrity sha512-I/1vETXP+qCfGFeMY8i+QLhyBpcEj0nDmWnP2vh7lDyOBNT9LjAiY6kigUzEHbfhoNe3vnJWYK6uCzxIsi622Q==
-
-rsocket-types@^0.0.27:
-  version "0.0.27"
-  resolved "https://registry.yarnpkg.com/rsocket-types/-/rsocket-types-0.0.27.tgz#503e183040dc90adfd0ca834da6adc8e60bf0ecf"
-  integrity sha512-88vgA+d31a6wW5YP63jQZ0CqZ3DALtH4oCbuMtIcNy28m1kDYGPZunhsnw+YC/XtjOqb5hKhn10ZQm7OK2xc1g==
-  dependencies:
-    rsocket-flowable "^0.0.27"
-
-rsocket-websocket-client@^0.0.27:
-  version "0.0.27"
-  resolved "https://registry.yarnpkg.com/rsocket-websocket-client/-/rsocket-websocket-client-0.0.27.tgz#8c1e12fdc19c09a5b5c28c7c68376e6f90d14154"
-  integrity sha512-1BX2O1C1R5W78kI7J5E/nbzxawUOceLggeG1b7rnIGZgCbnftGoIOF5xU/Q268UCE4NNtaDRED4xSHJpdAVFBw==
-  dependencies:
-    rsocket-core "^0.0.27"
-    rsocket-flowable "^0.0.27"
-    rsocket-types "^0.0.27"
 
 run-parallel@^1.1.9:
   version "1.2.0"

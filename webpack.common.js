@@ -1,4 +1,5 @@
 const path = require("path");
+const Webpack = require("webpack");
 const {CleanWebpackPlugin} = require('clean-webpack-plugin');
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
@@ -77,9 +78,15 @@ module.exports = {
       template: path.join(__dirname, "src/devtools.html"),
       filename: "devtools.html",
       chunks: ["devtools"]
-    })
+    }),
+    new Webpack.ProvidePlugin({
+      Buffer: ["buffer", "Buffer"],
+    }),
   ],
   resolve: {
-    extensions: [".ts", ".tsx", ".js"]
+    extensions: [".ts", ".tsx", ".js"],
+    fallback: {
+      buffer: require.resolve("buffer/"),
+    },
   }
 };

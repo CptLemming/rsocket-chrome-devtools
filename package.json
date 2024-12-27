@@ -20,9 +20,6 @@
     "@types/react-inspector": "^4.0.1",
     "@types/react-virtualized-auto-sizer": "^1.0.1",
     "@types/react-window": "^1.8.5",
-    "@types/rsocket-core": "^0.0.6",
-    "@types/rsocket-types": "^0.0.2",
-    "@types/rsocket-websocket-client": "^0.0.3",
     "clean-webpack-plugin": "^4.0.0",
     "copy-webpack-plugin": "^12.0.2",
     "css-loader": "^6.9.1",
@@ -52,7 +49,7 @@
     "react-inspector": "^6.0.2",
     "react-virtualized-auto-sizer": "1.0.6",
     "react-window": "^1.8.6",
-    "rsocket-core": "^0.0.27",
-    "rsocket-websocket-client": "^0.0.27"
+    "@rsocket/core": "^1.0.0-alpha.3",
+    "@rsocket/websocket-client": "^1.0.0-alpha.3"
   }
 }
