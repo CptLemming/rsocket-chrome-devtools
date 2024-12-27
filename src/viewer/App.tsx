@@ -407,7 +407,9 @@ export class AppStateStore {
       const rSocketFrame = tryDeserializeFrame(frame.payload);
       connection.frames.push(frame)
       connection.index.add(frame.id, (rSocketFrame as any)?.data ?? frame.text ?? frame.payload)
-      this.activeConnection = requestId;
+      if (this.activeConnection == undefined) {
+        this.activeConnection = requestId;
+      }
     }
   }
 
