@@ -15,6 +15,23 @@ module.exports = {
   module: {
     rules: [
       {
+        test: /\.(js)$/,
+        use: [
+          {
+            loader: 'string-replace-loader',
+            options: {
+              multiple: [{
+                search: /eval.*\(moduleName\);/g,
+                replace: 'undefined;',
+              }],
+            },
+          },
+        ],
+        include: [
+          path.join(__dirname, 'node_modules/@protobufjs/inquire'),
+        ],
+      },
+      {
         test: /\.css$/,
         use: ["style-loader", "css-loader"],
         exclude: /node_modules/

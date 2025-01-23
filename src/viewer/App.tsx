@@ -13,10 +13,132 @@ import {action, makeObservable, observable, computed} from "mobx";
 import {observer} from "mobx-react-lite";
 import {Buffer} from "buffer";
 import {Index, IndexSearchResult} from "flexsearch";
+import { encodeAndAddWellKnownMetadata, encodeBearerAuthMetadata, encodeCompositeMetadata, encodeRoute, WellKnownMimeType, decodeCompositeMetadata, decodeRoutes } from "@rsocket/composite-metadata";
+import { WebsocketClientTransport } from "@rsocket/websocket-client";
+import { RSocket, RSocketConnector } from "@rsocket/core";
+import $protobuf, { Root } from "protobufjs";
+import descriptor from "protobufjs/ext/descriptor";
+import { grpc } from "../generated/api";
+
 import WebSocketFrameReceivedEvent = Protocol.Network.WebSocketFrameReceivedEvent;
 import WebSocketFrameSentEvent = Protocol.Network.WebSocketFrameSentEvent;
 import WebSocketFrame = Protocol.Network.WebSocketFrame;
 import WebSocketCreatedEvent = Protocol.Network.WebSocketCreatedEvent;
+import MESSAGE_RSOCKET_AUTHENTICATION = WellKnownMimeType.MESSAGE_RSOCKET_AUTHENTICATION;
+import MESSAGE_RSOCKET_ROUTING = WellKnownMimeType.MESSAGE_RSOCKET_ROUTING;
+
+function makeMetadata(bearerToken?: string) {
+  const map = new Map<WellKnownMimeType, Buffer>();
+
+  if (bearerToken) {
+    map.set(MESSAGE_RSOCKET_AUTHENTICATION, encodeBearerAuthMetadata(Buffer.from(bearerToken)));
+  }
+
+  return encodeCompositeMetadata(map);
+}
+
+const getReflections = async (address: string, filename: string) => {
+  const transport = new RSocketConnector({
+    setup: {
+      metadataMimeType: WellKnownMimeType.MESSAGE_RSOCKET_COMPOSITE_METADATA.string,
+      payload: {
+        data: Buffer.from([]),
+        metadata: makeMetadata("automation"), // FIXME API should support reflection without user
+      },
+    },
+    transport: new WebsocketClientTransport({
+      url: address,
+      wsCreator: url => new WebSocket(url) as any,
+    }),
+  });
+
+  const rSocket = await transport.connect();
+
+  const routeMetadata = encodeRoute("grpc.reflection.v1.ServerReflection.ServerReflectionInfo");
+  const metadata = encodeAndAddWellKnownMetadata(
+    Buffer.alloc(0),
+    WellKnownMimeType.MESSAGE_RSOCKET_ROUTING,
+    routeMetadata,
+  );
+
+  const p = new Promise<grpc.reflection.v1.ServerReflectionResponse>((resolve, reject) => {
+    const endpoint = grpc.reflection.v1.ServerReflection.create((req, data, onDone) => {
+      rSocket.requestChannel(
+        {
+          data: Buffer.from(data),
+          metadata,
+        },
+        16,
+        false,
+        {
+          onError: e => {
+            onDone(e);
+          },
+          onNext: (payload: any, isComplete: boolean) => {
+            onDone(null, payload.data);
+          },
+          onComplete: () => {
+            onDone(null, null);
+          },
+          onExtension: () => {},
+          request: (requestNumber) => {},
+          cancel: () => {},
+        },
+      );
+    });
+
+    endpoint.serverReflectionInfo(grpc.reflection.v1.ServerReflectionRequest.create({
+      fileByFilename: filename,
+    }), (err, msg) => {
+      if (err != null) {
+        reject(err);
+      } else if (msg != null) {
+        resolve(msg);
+      }
+    });
+  });
+
+  const res = await p;
+  rSocket.close();
+
+  if (res.fileDescriptorResponse?.fileDescriptorProto != null) {
+    // Force function overrides to run
+    descriptor.FileDescriptorSet.comment;
+    const encoded = grpc.reflection.v1.FileDescriptorResponse.encode(res.fileDescriptorResponse as grpc.reflection.v1.FileDescriptorResponse).finish();
+    // @ts-ignore
+    return $protobuf.Root.fromDescriptor(encoded);
+  }
+  return null;
+};
+
+// Map of service to request / response
+const REFLECTIONS: Record<string, any> = {};
+// Map of stream ID to service
+const STREAMS: Record<string, string> = {};
+
+function fetchReflections(address: string, endpoint: string) {
+  if (REFLECTIONS[endpoint] != null) {
+    return;
+  }
+ 
+  const parts = endpoint.split(".");
+  const methodName = parts.pop();
+  const serviceName = parts.join(".");
+
+  getReflections(address, serviceName).then(res => {
+    let service = res.lookupService(serviceName);
+  
+    for (const method of Object.values(service.methods) as any) {
+      const request = res.lookupType(method.requestType);
+      const response = res.lookupType(method.responseType);
+
+      REFLECTIONS[`${serviceName}.${method.name}`] = {
+        request,
+        response,
+      }
+    }
+  });
+}
 
 const flagsMap = new Map<string, number>([
   // ["NONE", 0],
@@ -184,8 +306,18 @@ class RSocketFrame extends React.Component<RSocketFrameProps, any> {
     }
     let jsonData: any;
     try {
-      let data = (frame as any).data;
-      jsonData = data ? JSON.parse(data) : undefined;
+      if (frame.type == 0x0a && STREAMS[frame.streamId] != null) {
+        // Payload response
+        let data = frame.data;
+        jsonData = data ? REFLECTIONS[STREAMS[frame.streamId]].response.decode(data) : undefined;
+      } else if (frame.type == 0x04 && STREAMS[frame.streamId] != null) {
+        // FireAndForget request
+        let data = frame.data;
+        jsonData = data ? REFLECTIONS[STREAMS[frame.streamId]].request.decode(data) : undefined;
+      } else {
+        let data = (frame as any).data;
+        jsonData = data ? JSON.parse(data) : undefined;
+      }
     } catch (e) {
       jsonData = undefined;
     }
@@ -430,6 +562,33 @@ export class AppStateStore {
       }
       const connection = this.ensureConnection(requestId);
       const rSocketFrame = tryDeserializeFrame(frame.payload);
+
+      if ((rSocketFrame?.type == 0x06 || rSocketFrame?.type == 0x04) && rSocketFrame.metadata != null) {
+        // request stream frame - metadata contains our route
+        const decodedCompositeMetaData = decodeCompositeMetadata(rSocketFrame.metadata);
+
+        for (let metaData of decodedCompositeMetaData) {
+          switch (metaData.mimeType) {
+            case MESSAGE_RSOCKET_ROUTING.toString(): {
+              const tags = [];
+              for (let decodedRoute of decodeRoutes(metaData.content)) {
+                tags.push(decodedRoute);
+              }
+              const joinedRoute = tags.join(".");
+              STREAMS[rSocketFrame.streamId] = joinedRoute;
+
+              if (connection?.url != null) {
+                fetchReflections(connection.url, joinedRoute);
+              }
+              break;
+            }
+          }
+        }
+      } else if (rSocketFrame?.type == 0x09) {
+        // Cancel frame, clear up cached streams
+        delete STREAMS[rSocketFrame.streamId];
+      }
+
       connection.frames.push(frame)
       connection.index.add(frame.id, (rSocketFrame as any)?.data ?? frame.text ?? frame.payload)
       if (this.activeConnection == undefined) {
